@@ -1,0 +1,256 @@
+#include <18f4550_8servos1.8_apenas_pic.h>
+#include "lcd18f4550.c"// minha biblioteca LCD
+#define EEPROM_SDA  PIN_B6 
+#define EEPROM_SCL  PIN_B7
+#use i2c(master, sda=EEPROM_SDA, scl=EEPROM_SCL)
+
+#include <24512.c>
+
+typedef struct {
+int motor[9];
+}estrutura;
+long memoria=52,memoria_250=410;   //   32-32-250 (2000)       52-52-410 -(3280)
+
+int  botao[9];
+int1 status=0;
+int a=1,b=1,c=1,d=1,e=1,f=1,g=1,h=1;
+long ordem_exec,ordem_exec2,ini_program=1,fim_program=8;
+long i,j,jx;
+int velocidade;
+int  precisao,preciao=0;
+int posicionado=0;
+int anima=1;
+int animacao=0;
+int x[9];
+int comparador[9];
+int inicio[9];
+int fim[9];
+int  comint[9];
+long comlong[9];
+float diferenca[9];
+float comfloat[9];
+float float_final[9];
+long motor[8];
+
+void executar();
+void config_grupo1();
+void config_grupo2();
+void carregar_rapido();
+void botoes();
+
+
+void botoes(){
+botao[0]=input(pin_a0);
+botao[1]=input(pin_a1);
+botao[2]=input(pin_a2);
+botao[3]=input(pin_a3);
+botao[4]=input(pin_a5);
+botao[5]=input(pin_e0);
+botao[6]=input(pin_e1);
+botao[7]=input(pin_e2);
+botao[8]=input(pin_c0);
+}
+
+
+//#############################################################################
+void main(){
+INIT_EXT_EEPROM();
+delay_ms(500);
+motor[0]=31771; //D3
+motor[1]=31754; //b2
+motor[2]=31755; //b3
+motor[3]=31766; //C6
+motor[4]=31767; //C7
+motor[5]=31772; //D4
+motor[6]=31773; //D5
+motor[7]=31774; //D6
+  
+  for(i=0;i<11;i++)
+  {
+  output_bit(pin_d7,status);
+  delay_ms(100);
+  status=!status;
+  }
+  
+  
+  
+  
+  
+  
+while(true){
+botoes();
+if(botao[0]==1){
+output_bit(pin_d7,status);
+delay_ms(100);
+status=!status;}
+
+config_grupo1();}
+}
+
+
+//#############################################################################
+void executar(){
+
+for(i=0;i!=8;i++){
+
+
+inicio[i]=read_ext_eeprom((memoria-1)*i+anima+jx);
+fim[i]   =read_ext_eeprom((memoria-1)*i+anima+jx+1);
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// inicio igual=0 inicio maior=1 inicio menor =2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(inicio[i]==fim[i]){comparador[i]=0;}else{if(inicio[i]>fim[i]){comparador[i]=1;}else {comparador[i]=2;}} 
+if(comparador[i]==1){diferenca[i]=inicio[i]-fim[i];}else{diferenca[i]=fim[i]-inicio[i];}//resultado da subtração positiva
+comfloat[i]=diferenca[i]/precisao;//quantas vezes executar até posicionar depende do valor precisao(precisa de um float no calculo)
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(x[i]==0){comint[i]=inicio[i];}//começar na posicao inicial 
+if(x[i]==1){   
+if(comparador[i]==0){comint[i]=inicio[i]-comint[i];}//caso memorias iguais
+if(comparador[i]==1){comint[i]=inicio[i]-comint[i];}
+if(comparador[i]==2){comint[i]=inicio[i]+comint[i];}//processo de soma ou subtração para posicionar
+}x[i]=1;
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+//posicao do programa para os servos """comint[]"""" !!!!!!!!!!!!!!!!!!!!!!!!!!!
+for(j=0;j!=velocidade;j++){
+for(i=0;i!=8;i++){
+comlong[i]=comint[i];
+comlong[i]=600+comlong[i]*9;
+
+output_bit(motor[i],1);
+delay_us(comlong[i]);
+output_bit(motor[i],0);
+}
+//delay_ms(1);
+}
+
+
+
+
+for(i=0;i!=8;i++){
+float_final[i]=comfloat[i]+float_final[i];//soma o valor dividido por ela mesma 5,3+ 5,3 =10,6 + 5,3.....
+comint[i]=float_final[i];                //recebe float e converte para int
+}
+preciao++;
+if(preciao==precisao){posicionado=1;}else{posicionado=0;}
+if(preciao>precisao){preciao=precisao;} //Sistema para poder repetir valor de memoria[]motor[]
+
+if(anima<=animacao-1){
+if(posicionado==1){
+for(i=0;i!=8;i++){x[i]=0;float_final[i]=0; }
+anima=anima+1;//proxima animação
+posicionado=0;
+preciao=0;
+}
+}
+
+if(anima >= animacao ){
+anima=1;float_final[i]=0; comfloat[i]=0;preciao=0; //fim de um bloco de animacao
+
+config_grupo2();
+}
+}
+//#############################################################################
+
+//#############################################################################
+
+void carregar_rapido(){
+switch(ordem_exec2){
+case 1:
+  velocidade=read_ext_eeprom(4000);
+  animacao  =read_ext_eeprom(4001);
+  precisao  =read_ext_eeprom(4002);
+break;
+case 2:
+  velocidade=read_ext_eeprom(4003);
+  animacao  =read_ext_eeprom(4004);
+  precisao  =read_ext_eeprom(4005);
+break;
+case 3:
+  velocidade=read_ext_eeprom(4006);
+  animacao  =read_ext_eeprom(4007);
+  precisao  =read_ext_eeprom(4008);
+break;
+case 4:  
+  velocidade=read_ext_eeprom(4009);
+  animacao  =read_ext_eeprom(4010);
+  precisao  =read_ext_eeprom(4011);
+break;
+case 5:
+  velocidade=read_ext_eeprom(4012);
+  animacao  =read_ext_eeprom(4013);
+  precisao  =read_ext_eeprom(4014);
+break;
+case 6:
+  velocidade=read_ext_eeprom(4015);
+  animacao  =read_ext_eeprom(4016);
+  precisao  =read_ext_eeprom(4017);
+break;
+case 7:
+  velocidade=read_ext_eeprom(4018);
+  animacao  =read_ext_eeprom(4019);
+  precisao  =read_ext_eeprom(4020);
+break;
+case 8:
+  velocidade=read_ext_eeprom(4021);
+  animacao  =read_ext_eeprom(4022);
+  precisao  =read_ext_eeprom(4023);
+break;
+}
+a=read_ext_eeprom(4024);
+b=read_ext_eeprom(4025);
+c=read_ext_eeprom(4026);
+d=read_ext_eeprom(4027);
+e=read_ext_eeprom(4028);
+f=read_ext_eeprom(4029);
+g=read_ext_eeprom(4030);
+h=read_ext_eeprom(4031);
+ini_program=read_ext_eeprom(4032);
+fim_program=read_ext_eeprom(4033);
+
+jx=(memoria_250*(ordem_exec2-1));
+}
+
+//#############################################################################
+
+void config_grupo1(){
+
+for(i=0;i<8;i++){float_final[i]=0; comfloat[i]=0;}anima=1;preciao=0;  //zerar para não dar erro ao executar
+
+//carregar ordem execucao!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+a=read_ext_eeprom(4024);b=read_ext_eeprom(4025);c=read_ext_eeprom(4026);
+d=read_ext_eeprom(4027);e=read_ext_eeprom(4028);f=read_ext_eeprom(4029);
+g=read_ext_eeprom(4030);h=read_ext_eeprom(4031);
+ini_program=read_ext_eeprom(4032);
+fim_program=read_ext_eeprom(4033);
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ordem_exec=ini_program-1;
+config_grupo2();
+while(1){ 
+executar();
+}
+}
+
+//#############################################################################
+
+void config_grupo2(){ 
+ordem_exec++;
+if(ordem_exec>fim_program){ordem_exec=ini_program;}
+switch (ordem_exec){
+case 1:if(a>10){ordem_exec--;ordem_exec2=a-10;}else{ordem_exec2=a;}carregar_rapido();break;
+case 2:if(b>10){ordem_exec--;ordem_exec2=b-10;}else{ordem_exec2=b;}carregar_rapido();break;
+case 3:if(c>10){ordem_exec--;ordem_exec2=c-10;}else{ordem_exec2=c;}carregar_rapido();break;
+case 4:if(d>10){ordem_exec--;ordem_exec2=d-10;}else{ordem_exec2=d;}carregar_rapido();break;
+case 5:if(e>10){ordem_exec--;ordem_exec2=e-10;}else{ordem_exec2=e;}carregar_rapido();break;
+case 6:if(f>10){ordem_exec--;ordem_exec2=f-10;}else{ordem_exec2=f;}carregar_rapido();break;
+case 7:if(g>10){ordem_exec--;ordem_exec2=g-10;}else{ordem_exec2=g;}carregar_rapido();break;
+case 8:if(h>10){ordem_exec--;ordem_exec2=h-10;}else{ordem_exec2=h;}carregar_rapido();break;
+}
+}
+
+//#############################################################################
