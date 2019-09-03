@@ -1,0 +1,906 @@
+#include <18f4550_8servos1.8.h>
+/*##############################################################################
+                     MAPA DAS PORTAS ANALOGICAS NO PIC18F4550
+
+                 127                               
+
+                ***                                   
+     244       *   *     149               
+                ***                                                                      
+                                     230          31
+                57                               
+
+              pino_b3                    pin_b2
+                AN9                       AN8
+
+if(analogg[9]>120 && analogg[9]<137){}anx1 anx11
+if(analogg[9]>45  && analogg[9]< 67){}anx2 anx22
+if(analogg[9]>235 && analogg[9]<255){}anx3 anx33
+if(analogg[9]>140 && analogg[9]<160){}anx4 anx44
+
+if(analogg[8]>220 && analogg[8]<240){}anx5 anx55
+if(analogg[8]>20  && analogg[8]< 40){}anx6 anx66
+##############################################################################*/
+#include "lcd18f4550.c"// minha biblioteca LCD
+#define EEPROM_SDA  PIN_B7 
+#define EEPROM_SCL  PIN_B6
+#use i2c(master, sda=EEPROM_SDA, scl=EEPROM_SCL)
+#include <24512.c>
+typedef struct { 
+int motor[9];
+}estrutura;
+estrutura mem_ram[52];long memoria=52,memoria_250=410;   //   32-32-250 (2000)       52-52-410 -(3280)
+
+long anx1=120,anx11=137,anx2=45,anx22=67,anx3=235,anx33=255,anx4=140,anx44=160,anx5=220,anx55=240,anx6=20,anx66=40;
+
+int1 ini_fim_save=0;
+int1 status=0;
+int1 infinito;
+int a=1,b=1,c=1,d=1,e=1,f=1,g=1,h=1;
+long ordem_exec=0,ordem_exec2=0,ini_program=1,fim_program=8;
+long i,j,jj,jx,ii=1,iii=1;
+long analogg[10];
+long anarlog[10];
+int menu_ajust=7;
+int  precisao,preciao=0;
+int posicionado=0;
+int anima=1;
+int animacao=0,animex=0;
+int sair=0,sair2=0;
+int x[9];
+int comparador[9];
+int inicio[9];
+int fim[9];
+int  comint[9];
+long comlong[9];
+float diferenca[9];
+float comfloat[9];
+float float_final[9];
+long motor[8];
+
+void analog();
+void menu();
+void executar();
+
+void executar_grupo();int modo=0,modoo=0;
+void config_grupo1();
+void config_grupo2();
+
+void configurar();
+void loading();
+void gravar();
+void visualizar();
+void carregar();
+void carregar_rapido();
+void salvar();
+void exec_config();
+void velocidadee();
+void animacaoo();
+void velocidade();
+void pendrive_save();
+
+
+
+
+//#############################################################################
+void main(){
+INIT_EXT_EEPROM();
+lcd_ini();
+delay_ms(500);
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+a=read_ext_eeprom(4086);b=read_ext_eeprom(4087);c=read_ext_eeprom(4088);
+d=read_ext_eeprom(4089);e=read_ext_eeprom(4090);f=read_ext_eeprom(4091);
+g=read_ext_eeprom(4092);h=read_ext_eeprom(4093);
+ini_program=read_ext_eeprom(4094);
+fim_program=read_ext_eeprom(4095); 
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"A=%d B=%d C=%d D=%d  ",a,b,c,d);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"E=%d F=%d G=%d H=%d  ",e,f,g,h);lcd_pos_xy(21,1);
+ printf (lcd_escreve,"Inicio: %ld         ",ini_program);lcd_pos_xy(21,2);
+ printf (lcd_escreve,"Fim:    %ld         ",fim_program);
+ delay_ms(2000);
+
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   setup_adc_ports(ALL_ANALOG);
+   setup_adc(ADC_CLOCK_INTERNAL|ADC_TAD_MUL_0);
+//Definir as portas do microcontrolador a ser utilizada
+motor[0]=31771; //D3
+motor[1]=31754; //b2
+motor[2]=31755; //b3
+motor[3]=31766; //C6
+motor[4]=31767; //C7
+motor[5]=31772; //D4
+motor[6]=31773; //D5
+motor[7]=31774; //D6
+  
+
+  
+//zerar Ram!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  for(i=0;i!=9;i++){
+  x[i]=0;
+  float_final[i]=0;
+  comint[i]=0;
+  diferenca[i]=0;
+  comfloat[i]=0;
+  float_final[i]=0;
+  comparador[i]=0;
+  }
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+  for(i=0;i<11;i++)
+  {
+  output_bit(pin_d7,status);
+  delay_ms(100);
+  status=!status;
+  }
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+  precisao =20; 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+while(true){menu();}}
+
+
+//#############################################################################
+
+void velocidade(){
+while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]< anx66){sair=1;}
+if(precisao<1){precisao=1;}
+if(precisao>100){precisao=100;}
+lcd_escreve ('\f');lcd_pos_xy(1,1);
+printf (lcd_escreve,"Velocidade=%d      ",precisao);
+delay_ms(100);
+if(analogg[9]>anx3 && analogg[9]<anx33){precisao--;}
+if(analogg[9]>anx4 && analogg[9]<anx44){precisao++;}
+}sair=0;
+loading();
+}
+
+void exec_config(){
+i=1;j=1;
+ini_program=1;
+while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]< anx66){sair=1;}
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Iniciara em: %ld       "ini_program);delay_ms(100);
+if(analogg[9]>anx3 && analogg[9]<anx33){ini_program--;delay_ms(100);}
+if(analogg[9]>anx4 && analogg[9]<anx44){ini_program++;delay_ms(100);}
+if(ini_program<1){ini_program=1;}
+if(ini_program>8){ini_program=8;}
+}sair=0;
+loading();
+fim_program=4;
+while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]<anx66){sair=1;}
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Finalizara em: %ld    "fim_program);delay_ms(100);
+if(analogg[9]>anx3 && analogg[9]<anx33){fim_program--;delay_ms(100);}
+if(analogg[9]>anx4 && analogg[9]<anx44){fim_program++;delay_ms(100);}
+if(fim_program<ini_program){fim_program=ini_program;}
+if(fim_program>8){fim_program=8;}
+}sair=0;
+a=1;b=1;c=1;d=1;e=1;f=1;g=1;h=1;
+loading();
+
+
+i=1;j=ini_program;
+while(sair==0){analog();if(analogg[8]>anx5 && analogg[8]<anx55){sair=1;}
+if(analogg[9]>anx3 && analogg[9]<anx33){i--;delay_ms(100);}
+if(analogg[9]>anx4 && analogg[9]<anx44){i++;delay_ms(100);}
+if(i<1){i=1;}
+if(i>8){i=8;}
+
+if(analogg[9]>anx1 && analogg[9]<anx11){infinito=1;delay_ms(100);}
+if(analogg[9]>anx2 && analogg[9]<anx22){infinito=0;delay_ms(100);}
+
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf(lcd_escreve,"Bloco Animacao: %ld ",i);lcd_pos_xy(1,2);
+ printf(lcd_escreve,"Infinito:%u         ",infinito);lcd_pos_xy(21,1);
+ printf(lcd_escreve,"A:%u B:%u C:%u D:%u ",a,b,c,d);lcd_pos_xy(21,2);
+ printf(lcd_escreve,"E:%u F:%u G:%u H:%u",e,f,g,h);delay_ms(50);
+ 
+ 
+ switch (j){
+ case 1:lcd_pos_xy(21,1);printf(lcd_escreve," :%u B:%u C:%u D:%u",a,b,c,d);delay_ms(50);break;
+ case 2:lcd_pos_xy(21,1);printf(lcd_escreve,"A:%u  :%u C:%u D:%u",a,b,c,d);delay_ms(50);break;
+ case 3:lcd_pos_xy(21,1);printf(lcd_escreve,"A:%u B:%u  :%u D:%u",a,b,c,d);delay_ms(50);break;
+ case 4:lcd_pos_xy(21,1);printf(lcd_escreve,"A:%u B:%u C:%u  :%u",a,b,c,d);delay_ms(50);break;
+ case 5:lcd_pos_xy(21,2);printf(lcd_escreve," :%u F:%u G:%u H:%u",e,f,g,h);delay_ms(50);break;
+ case 6:lcd_pos_xy(21,2);printf(lcd_escreve,"E:%u  :%u G:%u H:%u",e,f,g,h);delay_ms(50);break;
+ case 7:lcd_pos_xy(21,2);printf(lcd_escreve,"E:%u F:%u  :%u H:%u",e,f,g,h);delay_ms(50);break;
+ case 8:lcd_pos_xy(21,2);printf(lcd_escreve,"E:%u F:%u G:%u  :%u",e,f,g,h);delay_ms(50);break;
+ }
+ 
+ 
+ if(analogg[8]>anx6  && analogg[8]<anx66){
+ delay_ms(50);
+ switch (j){
+ case 1:if(infinito==1){a=10+i;} else{a=i;}break;
+ case 2:if(infinito==1){b=10+i;} else{b=i;}break;
+ case 3:if(infinito==1){c=10+i;} else{c=i;}break;
+ case 4:if(infinito==1){d=10+i;} else{d=i;}break;
+ case 5:if(infinito==1){e=10+i;} else{e=i;}break;
+ case 6:if(infinito==1){f=10+i;} else{f=i;}break;
+ case 7:if(infinito==1){g=10+i;} else{g=i;}break;
+ case 8:if(infinito==1){h=10+i;} else{h=i;}break;
+ }
+j++; 
+if(j>fim_program){j=ini_program;}
+ }
+ 
+ 
+ 
+}sair=0;
+loading();
+pendrive_save();
+}
+//#############################################################################################################
+void pendrive_save(){
+
+ while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]< anx66){sair=1;}
+
+ if(analogg[9]>anx3 && analogg[9]<anx33){ini_fim_save=1;}
+ if(analogg[9]>anx4 && analogg[9]<anx44){ini_fim_save=0;}
+
+if(ini_fim_save==1){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf(lcd_escreve,"Salvar em pendrive? ");lcd_pos_xy(1,2);
+ printf(lcd_escreve,"Sim   X   Nao       ");
+}
+else{
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf(lcd_escreve,"Salvar em pendrive? ");lcd_pos_xy(1,2);
+ printf(lcd_escreve,"Sim       Nao  X    ");
+}
+ delay_ms(70);
+}sair=0;
+
+if(ini_fim_save==1){
+lcd_escreve ('\f');  lcd_pos_xy(1,1);printf(lcd_escreve,"Saving      ");delay_ms(300);
+lcd_escreve ('\f');  lcd_pos_xy(1,1);printf(lcd_escreve,"Saving.     ");delay_ms(300);
+lcd_escreve ('\f');  lcd_pos_xy(1,1);printf(lcd_escreve,"Saving..    ");delay_ms(300);
+lcd_escreve ('\f');  lcd_pos_xy(1,1);printf(lcd_escreve,"Saving...   ");delay_ms(300);
+write_ext_eeprom(4086,a);delay_ms(5);
+write_ext_eeprom(4087,b);delay_ms(5);
+write_ext_eeprom(4088,c);delay_ms(5);
+write_ext_eeprom(4089,d);delay_ms(5);
+write_ext_eeprom(4090,e);delay_ms(5);
+write_ext_eeprom(4091,f);delay_ms(5);
+write_ext_eeprom(4092,g);delay_ms(5);
+write_ext_eeprom(4093,h);delay_ms(5);
+write_ext_eeprom(4094,ini_program);delay_ms(5);
+write_ext_eeprom(4095,fim_program);delay_ms(5);
+
+write_ext_eeprom(4068,42);delay_ms(5);
+write_ext_eeprom(4069,66);delay_ms(5);
+lcd_escreve ('\f');  lcd_pos_xy(1,1);printf(lcd_escreve,"Saving complete ");delay_ms(700);
+}
+else{loading();}
+}
+//#############################################################################
+
+
+
+
+//#############################################################################
+void analog(){
+set_adc_channel(0);delay_us(10);analogg[0]=read_adc();
+set_adc_channel(1);delay_us(10);analogg[1]=read_adc();
+set_adc_channel(2);delay_us(10);analogg[2]=read_adc(); 
+set_adc_channel(3);delay_us(10);analogg[3]=read_adc();
+set_adc_channel(4);delay_us(10);analogg[4]=read_adc();
+set_adc_channel(5);delay_us(10);analogg[5]=read_adc();
+set_adc_channel(6);delay_us(10);analogg[6]=read_adc();
+set_adc_channel(7);delay_us(10);analogg[7]=read_adc();
+set_adc_channel(10);delay_us(10);analogg[8]=read_adc();
+set_adc_channel(12);delay_us(10);analogg[9]=read_adc();
+}
+
+//#############################################################################
+
+//#############################################################################
+void loading(){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Loading        ");delay_ms(100);lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Loading.       ");delay_ms(100);lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Loading..      ");delay_ms(100);lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Loading...     ");delay_ms(100);lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Loading....    ");delay_ms(100);
+}
+
+//#############################################################################
+
+//#############################################################################
+void menu(){//###################################################################
+analog();
+
+if(analogg[9]>anx1 && analogg[9]<anx11){ii--;delay_ms(100);}
+if(analogg[9]>anx2  && analogg[9]<anx22){ii++;delay_ms(100);}
+
+if(ii<1){ii=menu_ajust;}
+if(ii>menu_ajust){ii=1;}
+
+switch (ii){
+
+case 1:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,">>Configurar         ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Gravar dados       ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Executar          ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,"  Carregar dados   ");
+ 
+if(analogg[8]>anx6  && analogg[8]<anx66){
+loading();
+configurar();
+}
+break;
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+case 2:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Configurar        ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,">>Gravar dados      ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Executar          ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,"  Carregar dados   ");
+if(analogg[8]>anx6  && analogg[8]<anx66){
+gravar();
+ }
+ break;
+
+
+
+case 3:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Configurar        ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Gravar dados      ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,">>Executar          ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,"  Carregar dados   ");
+if(analogg[8]>anx6  && analogg[8]< anx66){
+for(i=0;i<8;i++){x[i]=0;float_final[i]=0; comfloat[i]=0;}anima=1;preciao=0;   //zerar para não dar erro ao executar
+
+while(sair==0){if(analogg[8]>anx5 && analogg[8]<anx55){sair=1;}
+modo=0;
+executar();
+}sair=0;
+}
+break;
+
+
+
+
+case 4:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Configurar        ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Gravar dados      ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Executar         ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,">>Carregar dados   ");
+if(analogg[8]>anx6  && analogg[8]<anx66){
+carregar();
+}
+break;
+
+
+
+case 5:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Gravar dados      ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Executar          ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Carregar dados    ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,">>Ver dados Salvos ");
+if(analogg[8]>anx6  && analogg[8]<anx66){
+visualizar();
+}
+break;
+
+
+case 6:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Executar          ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Carregar dados    ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Ver dados Salvos  ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,">>Salvar animacao ");
+ 
+
+if(analogg[8]>anx6  && analogg[8]<anx66){
+salvar();
+}
+break;
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+case 7:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Executar          ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Ver dados Salvos  ");lcd_pos_xy(21,1);
+ printf (lcd_escreve,"  Salvar animacao   ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,">>Executar grupo   ");
+ 
+ if(analogg[8]>anx6  && analogg[8]<anx66){
+for(i=0;i<8;i++){x[i]=0;float_final[i]=0; comfloat[i]=0;}anima=1;preciao=0;   //zerar para não dar erro ao executar
+modo=1;modoo=0;
+//carregar inicio programa modo 1 depois sempre modo1
+
+
+
+
+
+
+config_grupo1();
+}
+break;
+
+}
+
+
+delay_ms(100);
+}//##############################################################################
+
+//#############################################################################
+
+
+
+//#############################################################################
+void configurar(){
+while(sair2==0){analog();if(analogg[8]>anx5 && analogg[8]<anx55){sair2=1;}
+delay_ms(100);
+if(analogg[9]>anx1 && analogg[9]<anx11){iii--;delay_ms(100);}
+if(analogg[9]>anx2 && analogg[9]<anx22){iii++;delay_ms(100);}
+
+if(iii<1){iii=2;}
+if(iii>2){iii=1;}
+
+switch (iii){
+case 1:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,">>Velocidade        ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"  Ordem execucao    ");
+if(analogg[8]>anx6  && analogg[8]<anx66){
+loading();
+velocidade();
+}
+break;
+case 2:
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"  Velocidade        ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,">>Ordem execucao    ");
+if(analogg[8]>anx6  && analogg[8]<anx66){
+loading();
+exec_config();
+}
+break;
+
+
+}}
+loading();
+sair2=0;
+iii=1;
+}
+//#############################################################################
+
+
+
+
+//#############################################################################
+void executar(){
+analog();
+
+for(i=0;i<8;i++){
+
+
+if(modo==1){
+inicio[i]=read_ext_eeprom(((memoria-1)*i)+anima+jx);
+fim[i]   =read_ext_eeprom(((memoria-1)*i)+anima+jx+1);
+}
+else{
+inicio[i]=mem_ram[anima].motor[i];
+fim[i]   =mem_ram[anima+1].motor[i];      
+}
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// inicio igual=0 inicio maior=1 inicio menor =2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(inicio[i]==fim[i]){comparador[i]=0;}else{if(inicio[i]>fim[i]){comparador[i]=1;}else {comparador[i]=2;}} 
+if(comparador[i]==1){diferenca[i]=inicio[i]-fim[i];}else{diferenca[i]=fim[i]-inicio[i];}//resultado da subtração positiva
+comfloat[i]=diferenca[i]/precisao;//quantas vezes executar até posicionar depende do valor precisao(precisa de um float no calculo)
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(x[i]==0){comint[i]=inicio[i];}//começar na posicao inicial 
+if(x[i]==1){   
+if(comparador[i]==0){comint[i]=inicio[i]-comint[i];}//caso memorias iguais
+if(comparador[i]==1){comint[i]=inicio[i]-comint[i];}
+if(comparador[i]==2){comint[i]=inicio[i]+comint[i];}//processo de soma ou subtração para posicionar
+}x[i]=1;
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+//posicao do programa para os servos """comint[]"""" !!!!!!!!!!!!!!!!!!!!!!!!!!!
+for(j=0;j!=1;j++){
+for(i=0;i!=8;i++){
+comlong[i]=comint[i];
+comlong[i]=600+comlong[i]*9;
+
+output_bit(motor[i],1);
+delay_us(comlong[i]);
+output_bit(motor[i],0);
+}
+if(modo==0){delay_ms(4);}
+
+
+}
+ lcd_escreve ('\f');
+ lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Mem:%d Posicao:%ld",anima,ordem_exec2);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"A%u B%u C%u",comint[0],comint[1],comint[2]);lcd_pos_xy(21,1);
+ printf (lcd_escreve,"D%u E%u F%u",comint[3],comint[4],comint[5]);lcd_pos_xy(21,2);
+ printf (lcd_escreve,"G%u H%u V=%ld",comint[6],comint[7],comlong[4]);
+
+
+
+
+for(i=0;i!=8;i++){
+float_final[i]=comfloat[i]+float_final[i];//soma o valor dividido por ela mesma 5,3+ 5,3 =10,6 + 5,3.....
+comint[i]=float_final[i];                //recebe float e converte para int
+}
+preciao++;
+if(preciao==precisao){posicionado=1;}else{posicionado=0;}
+if(preciao>precisao){preciao=precisao;} //Sistema para poder repetir valor de memoria[]motor[]
+
+if(anima<=animacao-1){
+if(posicionado==1){
+for(i=0;i!=8;i++){x[i]=0;float_final[i]=0; }
+anima=anima+1;//proxima animação
+posicionado=0;
+preciao=0;
+}
+}
+
+if(anima >= animacao ){
+for(i=0;i<8;i++){x[i]=0;float_final[i]=0; comfloat[i]=0;}
+anima=1;
+preciao=0;
+//fim de um bloco de animacao
+if(modo==1){config_grupo2();}
+}
+}
+//#############################################################################
+
+
+
+//#############################################################################
+
+
+//#############################################################################
+void gravar(){
+loading();
+while(sair==0){analog();if(analogg[8]>anx5 && analogg[8]<anx55){sair=1;}
+analog();
+
+for(i=0;i<8;i++){
+analogg[i]=(180*analogg[i])/255;
+}
+for(i=0;i!=8;i++){
+anarlog[i]=600+analogg[i]*9;
+
+output_bit(motor[i],1);
+delay_us(anarlog[i]);
+output_bit(motor[i],0);
+}
+delay_ms(7);
+
+
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Memoria: %d       "animex);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"M1=%ld M2=%ld M3=%ld",analogg[0],analogg[1],analogg[2]);lcd_pos_xy(21,1);
+ printf (lcd_escreve,"M4=%ld M5=%ld M6=%ld",analogg[3],analogg[4],analogg[5]);lcd_pos_xy(21,2);
+ printf (lcd_escreve,"M7=%ld M8=%ld     ",analogg[6],analogg[7]);
+ 
+
+/* 
+
+mem_ram[animacao].motor[i]=analogg[i];
+}
+
+}*/
+
+if(analogg[8]>anx6  && analogg[8]<anx66){
+lcd_escreve ('\f');  lcd_pos_xy(1,1);
+printf (lcd_escreve,"Saving ");
+delay_ms(500);
+for(i=0;i<8;i++){
+mem_ram[animex].motor[i]=analogg[i];
+}} 
+
+if(analogg[9]>anx3 && analogg[9]<anx33){animex--;delay_ms(200);}
+if(analogg[9]>anx4 && analogg[9]<anx44){animex++;delay_ms(200);}
+if(animex<1){animex=1;}
+if(animex>=memoria){animex=memoria-1;}
+}
+
+for(i=0;i<8;i++){
+mem_ram[animex+1].motor[i]=mem_ram[1].motor[i];
+}
+animacao=animex+1;
+
+sair=0;
+loading();
+
+}
+//#############################################################################
+
+
+void visualizar(){
+loading();
+i=1;
+while(sair==0){analog();if(analogg[8]>anx5 && analogg[8]<anx55){sair=1;}
+
+
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Posicao: %lu      "i);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"M1=%u M2=%u M3=%u",mem_ram[i].motor[0],mem_ram[i].motor[1],mem_ram[i].motor[2]);lcd_pos_xy(21,1);
+ printf (lcd_escreve,"M4=%u M5=%u M6=%u",mem_ram[i].motor[3],mem_ram[i].motor[4],mem_ram[i].motor[5]);lcd_pos_xy(21,2);
+ printf (lcd_escreve,"M7=%u M8=%u     " ,mem_ram[i].motor[6],mem_ram[i].motor[7]);
+ delay_ms(50);
+
+
+if(analogg[9]>anx3 && analogg[9]<anx33){i--;delay_ms(200);}
+if(analogg[9]>anx4 && analogg[9]<anx44){i++;delay_ms(200);}
+
+if(i<1){i=1;}
+if(i>animacao){i=animacao;}
+
+}sair=0;
+loading();
+}
+
+
+void salvar(){
+loading();
+i=1;
+j=0;
+
+while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]<anx66){sair=1;}
+
+//!!!!!!!!!!!!!!!!!!  Seleção de eeprom !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Savar em: %lu     "i);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"<< 1 a 8 >>       ");delay_ms(50);
+if(analogg[9]>anx3 && analogg[9]<anx33){i--;delay_ms(200);}
+if(analogg[9]>anx4 && analogg[9]<anx44){i++;delay_ms(200);}
+if(i<1){i=1;}
+if(i>8){i=8;}
+}sair=0;
+
+j=(memoria_250*(i-1))+1;   //posicionando local de save
+
+lcd_escreve ('\f');  lcd_pos_xy(1,1);
+printf (lcd_escreve,"Saving :%lu         "i);lcd_pos_xy(1,2);
+printf (lcd_escreve,"End Eeprom: %lu    ",j);delay_ms(50);
+delay_ms(1000);
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+switch(i){
+case 1:
+  write_ext_eeprom(4070,animacao);delay_ms(5);
+  write_ext_eeprom(4071,precisao);delay_ms(5);
+break;
+case 2:
+  write_ext_eeprom(4072,animacao);delay_ms(5);
+  write_ext_eeprom(4073,precisao);delay_ms(5);
+break;
+case 3:
+  write_ext_eeprom(4074,animacao);delay_ms(5);
+  write_ext_eeprom(4075,precisao);delay_ms(5);
+break;
+case 4:
+  write_ext_eeprom(4076,animacao);delay_ms(5);
+  write_ext_eeprom(4077,precisao);delay_ms(5);
+break;
+case 5:
+  write_ext_eeprom(4078,animacao);delay_ms(5);
+  write_ext_eeprom(4079,precisao);delay_ms(5);
+break;
+case 6:
+  write_ext_eeprom(4080,animacao);delay_ms(5);
+  write_ext_eeprom(4081,precisao);delay_ms(5);
+break;
+case 7:
+  write_ext_eeprom(4082,animacao);delay_ms(5);
+  write_ext_eeprom(4083,precisao);delay_ms(5);
+break;
+case 8:
+  write_ext_eeprom(4084,animacao);delay_ms(5);
+  write_ext_eeprom(4085,precisao);delay_ms(5);
+break;
+}
+
+//Salvando RAM para eeprom !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+for(i=0;i<8;i++){
+for(jj=1;jj<memoria;jj++){
+write_ext_eeprom(j,mem_ram[jj].motor[i]); 
+delay_ms(5);
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"PenDrive= %u %ld  "read_ext_eeprom(jj),jj);
+j++;
+}}
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+}
+
+//############################################################################
+void carregar(){
+i=1;
+loading();
+sair=0;
+while(sair==0){analog();if(analogg[8]>anx6  && analogg[8]<anx66){sair=1;}
+
+//!!!!!!!!!!!!!!!!!!  Seleção de eeprom !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Memoria: %lu       ",i);delay_ms(50);
+if(analogg[9]>anx3 && analogg[9]<anx33){i--;delay_ms(200);}
+if(analogg[9]>anx4 && analogg[9]<anx44){i++;delay_ms(200);}
+if(i<1){i=1;}
+if(i>8){i=8;}
+}sair=0;
+
+switch(i){
+case 1:
+  animacao  =read_ext_eeprom(4070);
+  precisao  =read_ext_eeprom(4071);
+break;
+case 2:
+  animacao  =read_ext_eeprom(4072);
+  precisao  =read_ext_eeprom(4073);
+break;
+case 3:
+  animacao  =read_ext_eeprom(4074);
+  precisao  =read_ext_eeprom(4075);
+break;
+case 4:  
+  animacao  =read_ext_eeprom(4076);
+  precisao  =read_ext_eeprom(4077);
+break;
+case 5:
+  animacao  =read_ext_eeprom(4078);
+  precisao  =read_ext_eeprom(4079);
+break;
+case 6:
+  animacao  =read_ext_eeprom(4080);
+  precisao  =read_ext_eeprom(4081);
+break;
+case 7:
+  animacao  =read_ext_eeprom(4082);
+  precisao  =read_ext_eeprom(4083);
+break;
+case 8:
+  animacao  =read_ext_eeprom(4084);
+  precisao  =read_ext_eeprom(4085);
+break;
+}
+a=read_ext_eeprom(4086);
+b=read_ext_eeprom(4087);
+c=read_ext_eeprom(4088);
+d=read_ext_eeprom(4089);
+e=read_ext_eeprom(4090);
+f=read_ext_eeprom(4091);
+g=read_ext_eeprom(4092);
+h=read_ext_eeprom(4093);
+ini_program=read_ext_eeprom(4094);
+fim_program=read_ext_eeprom(4095);
+jx=(memoria_250*(i-1))+1;
+for(i=0;i<8;i++){
+for(jj=1;jj<memoria;jj++){
+mem_ram[jj].motor[i]=read_ext_eeprom(jx);   
+jx++;
+}}
+
+
+lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Carregado!!!!  ");
+ delay_ms(1000);
+
+}
+
+//#############################################################################
+
+
+
+
+ void carregar_rapido(){
+switch(ordem_exec2){
+case 1:
+  animacao  =read_ext_eeprom(4070);
+  precisao  =read_ext_eeprom(4071);
+break;
+case 2:
+  animacao  =read_ext_eeprom(4072);
+  precisao  =read_ext_eeprom(4073);
+break;
+case 3:
+  animacao  =read_ext_eeprom(4074);
+  precisao  =read_ext_eeprom(4075);
+break;
+case 4:  
+  animacao  =read_ext_eeprom(4076);
+  precisao  =read_ext_eeprom(4077);
+break;
+case 5:
+  animacao  =read_ext_eeprom(4078);
+  precisao  =read_ext_eeprom(4079);
+break;
+case 6:
+  animacao  =read_ext_eeprom(4080);
+  precisao  =read_ext_eeprom(4081);
+break;
+case 7:
+  animacao  =read_ext_eeprom(4082);
+  precisao  =read_ext_eeprom(4083);
+break;
+case 8:
+  animacao  =read_ext_eeprom(4084);
+  precisao  =read_ext_eeprom(4085);
+break;
+}
+a=read_ext_eeprom(4086);
+b=read_ext_eeprom(4087);
+c=read_ext_eeprom(4088);
+d=read_ext_eeprom(4089);
+e=read_ext_eeprom(4090);
+f=read_ext_eeprom(4091);
+g=read_ext_eeprom(4092);
+h=read_ext_eeprom(4093);
+ini_program=read_ext_eeprom(4094);
+fim_program=read_ext_eeprom(4095);
+if(modoo==1){
+jx=(memoria_250*(ordem_exec2-1));
+}
+if(modoo==0){
+jx=(memoria_250*(ordem_exec2-1))+1;
+modoo=1;
+}
+//jx=jx+1;
+}
+
+
+
+//#############################################################################
+
+void config_grupo1(){
+
+for(i=0;i<8;i++){float_final[i]=0; comfloat[i]=0;}anima=1;preciao=0;  //zerar para não dar erro ao executar
+
+//carregar ordem execucao!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+a=read_ext_eeprom(4024);b=read_ext_eeprom(4025);c=read_ext_eeprom(4026);
+d=read_ext_eeprom(4027);e=read_ext_eeprom(4028);f=read_ext_eeprom(4029);
+g=read_ext_eeprom(4030);h=read_ext_eeprom(4031);
+ini_program=read_ext_eeprom(4032);
+fim_program=read_ext_eeprom(4033);
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ordem_exec=ini_program-1;
+config_grupo2();
+while(sair==0){if(analogg[8]>anx5 && analogg[8]<anx55){sair=1;}
+executar();
+}sair=0;
+}
+
+//#############################################################################
+
+void config_grupo2(){ 
+ordem_exec++;
+if(ordem_exec>fim_program){ordem_exec=ini_program;}
+switch (ordem_exec){
+case 1:if(a>10){ordem_exec--;ordem_exec2=a-10;}else{ordem_exec2=a;}carregar_rapido();break;
+case 2:if(b>10){ordem_exec--;ordem_exec2=b-10;}else{ordem_exec2=b;}carregar_rapido();break;
+case 3:if(c>10){ordem_exec--;ordem_exec2=c-10;}else{ordem_exec2=c;}carregar_rapido();break;
+case 4:if(d>10){ordem_exec--;ordem_exec2=d-10;}else{ordem_exec2=d;}carregar_rapido();break;
+case 5:if(e>10){ordem_exec--;ordem_exec2=e-10;}else{ordem_exec2=e;}carregar_rapido();break;
+case 6:if(f>10){ordem_exec--;ordem_exec2=f-10;}else{ordem_exec2=f;}carregar_rapido();break;
+case 7:if(g>10){ordem_exec--;ordem_exec2=g-10;}else{ordem_exec2=g;}carregar_rapido();break;
+case 8:if(h>10){ordem_exec--;ordem_exec2=h-10;}else{ordem_exec2=h;}carregar_rapido();break;
+}
+}
+
+//#############################################################################
