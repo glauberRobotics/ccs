@@ -1,0 +1,125 @@
+#include <lcd20x4.h>
+#include "lcdB18f4620.c"
+#include "lib_rf2gh4_10.h"
+long x,y;
+void analog();
+int tempo=100;
+
+void main()
+{
+   int8 ret2;
+   RF_INT_EN();              // Habilitar interrupcção RB0/INT.
+   RF_CONFIG_SPI();          // Configurar módulo SPI do PIC.
+   RF_CONFIG(0x40,0xF2);     // Configurar módulo RF canal e direcção de recepcção. Para receber os dados tem que ter a mesma do receptor
+   RF_ON();                  // Ativar modulo RF
+   delay_ms(5);              // Le damos un mínimo de 2.5 milisegundos para que se ponga en marcha.
+   //RF_DIR=0x24;           // mudar direcao do receptor
+
+   setup_adc_ports(AN0_TO_AN1);
+   setup_adc(ADC_CLOCK_INTERNAL|ADC_TAD_MUL_0);
+
+lcd_ini();
+delay_ms(5);
+set_adc_channel(0);
+delay_ms(1);
+while(true)
+{
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(input (pin_E1)){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"              E1X   ");delay_ms(3);
+         
+       //  RF_DATA[0]=255;
+      //   RF_DATA[0]=x;ret2=RF_SEND();delay_ms(10);
+         
+          
+         RF_DATA[0]=254;ret2=RF_SEND();delay_us(500);
+         RF_DATA[0]=x;ret2=RF_SEND();delay_us(500);
+         
+}
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+if(input (pin_a3)){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"               A3Y  ");delay_ms(3);
+ 
+         RF_DATA[0]=255;ret2=RF_SEND();delay_us(500);
+         RF_DATA[0]=y;ret2=RF_SEND();delay_us(500); 
+ 
+}
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(input (pin_a5)){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Porta A5           ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"          127     ");delay_ms(tempo);
+          RF_DATA[0]= 127;      
+         ret2=RF_SEND();        
+         delay_ms(1);
+}
+
+
+if(input (pin_E0)){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Porta E0            ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"         64        ");delay_ms(tempo);
+          RF_DATA[0]= 64; 
+         ret2=RF_SEND();        
+         delay_ms(1);
+}
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+if(input (pin_E2)){
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"Porta E2            ");lcd_pos_xy(1,2);
+ printf (lcd_escreve,"             63    ");delay_ms(tempo);
+         RF_DATA[0]= 63;  
+         ret2=RF_SEND();      
+         delay_ms(1);
+}
+
+
+ analog();
+ lcd_escreve ('\f');  lcd_pos_xy(1,1);
+ printf (lcd_escreve,"AnalogX=%ld         ",x);lcd_pos_xy(1,2);
+ printf (lcd_escreve,"AnalogY=%ld         ",y);lcd_pos_xy(21,1);
+ printf (lcd_escreve,"                    ");lcd_pos_xy(21,2);
+ printf (lcd_escreve,"                   ");delay_ms(10);
+
+
+
+
+
+
+
+}
+}
+
+
+
+void analog(){
+
+set_adc_channel(0);
+delay_ms(1);
+x=read_adc(); x=x*0.705;
+delay_ms(1);
+set_adc_channel(1);
+delay_ms(1);
+y=read_adc();y=y*0.705;
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
